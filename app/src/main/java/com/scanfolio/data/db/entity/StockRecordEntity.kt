@@ -8,7 +8,7 @@ data class StockRecordEntity(
     val code: String,
     val name: String,
     @ColumnInfo(name = "data_columns")
-    val dataColumns: String = "{}",
+    val dataColumns: Map<String, String> = emptyMap(),
     @ColumnInfo(name = "last_screenshot")
     val lastScreenshot: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "created_at")

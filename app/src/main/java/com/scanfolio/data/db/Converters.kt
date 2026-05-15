@@ -8,11 +8,11 @@ class Converters {
     private val gson = Gson()
 
     @TypeConverter
-    fun fromStringMap(value: Map<String, String>): String =
+    fun mapToString(value: Map<String, String>): String =
         gson.toJson(value)
 
     @TypeConverter
-    fun toStringMap(value: String): Map<String, String> {
+    fun stringToMap(value: String): Map<String, String> {
         val type = object : TypeToken<Map<String, String>>() {}.type
         return try { gson.fromJson(value, type) } catch (_: Exception) { emptyMap() }
     }
