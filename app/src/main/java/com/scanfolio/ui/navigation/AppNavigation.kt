@@ -71,10 +71,10 @@ fun AppNavigation() {
                 com.scanfolio.ui.settings.SettingsScreen(navController)
             }
             composable("column_manage") {
-                com.scanfolio.ui.settings.ColumnManageScreen()
+                com.scanfolio.ui.settings.ColumnManageScreen(navController)
             }
             composable("strategy_manage") {
-                com.scanfolio.ui.settings.StrategyManageScreen()
+                com.scanfolio.ui.settings.StrategyManageScreen(navController)
             }
         }
     }
