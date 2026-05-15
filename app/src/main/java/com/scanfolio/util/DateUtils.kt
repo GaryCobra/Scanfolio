@@ -1,18 +1,29 @@
 package com.scanfolio.util
 
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 object DateUtils {
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    private val dateOnlyFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    private val dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-    fun formatTimestamp(millis: Long): String = dateFormat.format(Date(millis))
+    fun formatTimestamp(millis: Long): String {
+        val dt = LocalDateTime.ofEpochSecond(millis / 1000, 0, ZoneId.systemDefault().rules.getOffset(java.time.Instant.ofEpochMilli(millis)))
+        return dt.format(dateTimeFormatter)
+    }
 
-    fun formatDateOnly(millis: Long): String = dateOnlyFormat.format(Date(millis))
+    fun formatDateOnly(millis: Long): String {
+        val dt = LocalDateTime.ofEpochSecond(millis / 1000, 0, ZoneId.systemDefault().rules.getOffset(java.time.Instant.ofEpochMilli(millis)))
+        return dt.format(dateOnlyFormatter)
+    }
 
     fun parseTimestamp(text: String): Long? {
-        return try { dateFormat.parse(text)?.time } catch (_: Exception) { null }
+        return try {
+            val dt = LocalDateTime.parse(text, dateTimeFormatter)
+            dt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        } catch (_: Exception) { null }
     }
 
     fun formatDuration(seconds: Long): String {

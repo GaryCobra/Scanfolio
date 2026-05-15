@@ -24,28 +24,11 @@ class ExportImportManager(
     private val gson = Gson()
 
     suspend fun exportToJson(): String {
-        val stocks = stockRepository.getAll().let { flow ->
-            val list = mutableListOf<StockRecordEntity>()
-            flow.collect { list.addAll(it) }
-            list
-        }
         val data = ExportData(
-            stockRecords = stocks,
-            tradeRecords = tradeRepository.getAll().let { flow ->
-                val list = mutableListOf<TradeRecordEntity>()
-                flow.collect { list.addAll(it) }
-                list
-            },
-            columnDefinitions = settingsRepository.getAllColumns().let { flow ->
-                val list = mutableListOf<ColumnDefinitionEntity>()
-                flow.collect { list.addAll(it) }
-                list
-            },
-            strategyTypes = settingsRepository.getStrategies().let { flow ->
-                val list = mutableListOf<StrategyTypeEntity>()
-                flow.collect { list.addAll(it) }
-                list
-            }
+            stockRecords = stockRepository.getAll().first(),
+            tradeRecords = tradeRepository.getAll().first(),
+            columnDefinitions = settingsRepository.getAllColumns().first(),
+            strategyTypes = settingsRepository.getStrategies().first()
         )
         return gson.toJson(data)
     }
