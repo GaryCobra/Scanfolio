@@ -8,3 +8,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+build/
+
+# Android SDK tools
+tools/
+cmdline-tools.zip
+jdk17.zip
+download_build_tools.py
+*.zip

@@ -15,6 +15,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.scanfolio.data.db.entity.MarketIndexDefinitionEntity
 import com.scanfolio.util.DateUtils
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +81,9 @@ fun IndexManageScreen(
                                 Text("录入数据")
                             }
                             IconButton(onClick = {
-                                viewModel.marketIndexRepo.deleteDefinition(index)
+                                GlobalScope.launch {
+                                    viewModel.marketIndexRepo.deleteDefinition(index)
+                                }
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                             }
@@ -117,9 +121,11 @@ fun IndexManageScreen(
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.marketIndexRepo.addDefinition(
-                        MarketIndexDefinitionEntity(name = name, code = code)
-                    )
+                    GlobalScope.launch {
+                        viewModel.marketIndexRepo.addDefinition(
+                            MarketIndexDefinitionEntity(name = name, code = code)
+                        )
+                    }
                     showAddDialog = false
                 }, enabled = name.isNotBlank()) {
                     Text("添加")

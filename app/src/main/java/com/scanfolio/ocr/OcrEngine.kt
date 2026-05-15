@@ -8,16 +8,18 @@ import java.io.FileOutputStream
 
 class OcrEngine(private val context: Context) {
 
-    private val tessBaseAPI: TessBaseAPI by lazy {
+    private val tessBaseAPI = lazyTess()
+
+    private fun lazyTess(): TessBaseAPI {
         val datapath = context.filesDir.absolutePath + File.separator + "tesseract"
         val dir = File(datapath + File.separator + "tessdata")
         if (!dir.exists()) dir.mkdirs()
         copyTrainedDataIfNeeded(dir)
 
-        TessBaseAPI().apply {
-            init(datapath, "chi_sim")
-            setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK)
-        }
+        val api = TessBaseAPI()
+        api.init(datapath, "chi_sim")
+        api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK)
+        return api
     }
 
     private fun copyTrainedDataIfNeeded(dir: File) {
@@ -35,12 +37,11 @@ class OcrEngine(private val context: Context) {
         }
     }
 
+    @Synchronized
     fun recognizeText(bitmap: Bitmap): String {
         val processed = ImagePreprocessor.binarize(ImagePreprocessor.toGrayscale(bitmap))
-        synchronized(tessBaseAPI) {
-            tessBaseAPI.setImage(processed)
-            return tessBaseAPI.utf8Text
-        }
+        tessBaseAPI.setImage(processed)
+        return tessBaseAPI.getUTF8Text()
     }
 
     fun recognizeRegion(bitmap: Bitmap, left: Int, top: Int, width: Int, height: Int): String {
@@ -48,7 +49,11 @@ class OcrEngine(private val context: Context) {
         return recognizeText(cropped)
     }
 
+    @Synchronized
     fun release() {
-        synchronized(tessBaseAPI) { tessBaseAPI.recycle() }
+        try {
+            val m = tessBaseAPI.javaClass.getDeclaredMethod("recycle")
+            m.invoke(tessBaseAPI)
+        } catch (_: Exception) {}
     }
 }

@@ -8,6 +8,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,7 +69,9 @@ fun StrategyManageScreen(
                         ) {
                             Text(strategy.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                             IconButton(onClick = {
-                                viewModel.settingsRepo.deleteStrategy(strategy.name)
+                                GlobalScope.launch {
+                                    viewModel.settingsRepo.deleteStrategy(strategy.name)
+                                }
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                             }
@@ -93,7 +97,9 @@ fun StrategyManageScreen(
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.settingsRepo.addStrategy(name)
+                    GlobalScope.launch {
+                        viewModel.settingsRepo.addStrategy(name)
+                    }
                     showAddDialog = false
                 }, enabled = name.isNotBlank()) {
                     Text("添加")

@@ -17,6 +17,8 @@ import com.scanfolio.data.db.entity.MarketIndexDailyRecordEntity
 import com.scanfolio.ui.theme.DownGreen
 import com.scanfolio.ui.theme.UpRed
 import com.scanfolio.util.DateUtils
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +87,9 @@ fun IndexRecordEntryScreen(
                                 }
                             }
                             IconButton(onClick = {
-                                viewModel.marketIndexRepo.deleteRecord(record)
+                                GlobalScope.launch {
+                                    viewModel.marketIndexRepo.deleteRecord(record)
+                                }
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                             }
@@ -180,7 +184,7 @@ private fun IndexRecordDialog(
                     changePercent = changePercent.toDoubleOrNull() ?: return@Button,
                     kdjStatus = kdjStatus.ifBlank { null }
                 )
-                kotlinx.coroutines.GlobalScope.launch {
+                GlobalScope.launch {
                     if (existingRecord != null) viewModel.marketIndexRepo.updateRecord(record)
                     else viewModel.marketIndexRepo.addRecord(record)
                 }

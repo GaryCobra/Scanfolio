@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.scanfolio.data.db.entity.ColumnDefinitionEntity
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +80,9 @@ fun ColumnManageScreen(
                             Switch(
                                 checked = column.enabled,
                                 onCheckedChange = {
-                                    viewModel.settingsRepo.updateColumn(column.copy(enabled = it))
+                                    GlobalScope.launch {
+                                        viewModel.settingsRepo.updateColumn(column.copy(enabled = it))
+                                    }
                                 }
                             )
                         }
@@ -92,15 +96,18 @@ fun ColumnManageScreen(
         AddColumnDialog(
             onDismiss = { showAddDialog = false },
             onConfirm = { name, type ->
-                viewModel.settingsRepo.addColumn(
-                    ColumnDefinitionEntity(name = name, columnType = type, sortOrder = columns.size)
-                )
+                GlobalScope.launch {
+                    viewModel.settingsRepo.addColumn(
+                        ColumnDefinitionEntity(name = name, columnType = type, sortOrder = columns.size)
+                    )
+                }
                 showAddDialog = false
             }
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddColumnDialog(
     onDismiss: () -> Unit,

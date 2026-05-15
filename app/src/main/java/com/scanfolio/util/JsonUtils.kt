@@ -4,7 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
 object JsonUtils {
-    private val gson = Gson()
+    val gson = Gson()
 
     fun toJson(obj: Any): String = gson.toJson(obj)
 
