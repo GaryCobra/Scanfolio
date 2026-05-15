@@ -23,5 +23,7 @@ data class TradeRecordEntity(
     @ColumnInfo(name = "profit_amount") val profitAmount: Double? = null,
     @ColumnInfo(name = "strategy_name") val strategyName: String,
     @ColumnInfo(name = "is_success") val isSuccess: Boolean,
+    @ColumnInfo(name = "is_virtual") val isVirtual: Boolean = false,
+    @ColumnInfo(name = "virtual_capital") val virtualCapital: Double? = null,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )

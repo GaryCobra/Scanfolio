@@ -12,6 +12,9 @@ interface TradeRecordDao {
     @Query("SELECT * FROM trade_records WHERE is_success = :isSuccess")
     fun getBySuccess(isSuccess: Boolean): Flow<List<TradeRecordEntity>>
 
+    @Query("SELECT * FROM trade_records WHERE is_virtual = :isVirtual")
+    fun getByVirtual(isVirtual: Boolean): Flow<List<TradeRecordEntity>>
+
     @Query("SELECT * FROM trade_records")
     fun getAll(): Flow<List<TradeRecordEntity>>
 

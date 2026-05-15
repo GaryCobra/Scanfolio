@@ -13,6 +13,12 @@ class ScanfolioApp : Application() {
     val settingsRepository by lazy {
         SettingsRepository(database.columnDefinitionDao(), database.strategyTypeDao())
     }
+    val marketIndexRepository by lazy {
+        MarketIndexRepository(
+            database.marketIndexDefinitionDao(),
+            database.marketIndexDailyRecordDao()
+        )
+    }
 
     val ocrEngine by lazy { OcrEngine(this) }
     val tableAnalyzer by lazy { TableAnalyzer(ocrEngine) }
