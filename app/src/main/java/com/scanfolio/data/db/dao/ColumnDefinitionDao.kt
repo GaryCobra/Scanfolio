@@ -13,7 +13,7 @@ interface ColumnDefinitionDao {
     fun getAllColumns(): Flow<List<ColumnDefinitionEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(column: ColumnDefinitionEntity)
+    suspend fun insert(column: ColumnDefinitionEntity): Long
 
     @Update
     suspend fun update(column: ColumnDefinitionEntity)
