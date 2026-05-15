@@ -182,14 +182,24 @@ private fun TradeListItem(trade: TradeRecordEntity) {
                     Text("买入: ${DateUtils.formatTimestamp(trade.buyTime)}", style = MaterialTheme.typography.bodyMedium)
                     Text("价格: ¥${"%.2f".format(trade.buyPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                AssistChip(
-                    onClick = {},
-                    label = { Text(if (trade.isSuccess) "成功" else "失败", fontWeight = FontWeight.Medium) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = if (trade.isSuccess) UpRed.copy(alpha = 0.1f) else DownGreen.copy(alpha = 0.1f),
-                        labelColor = if (trade.isSuccess) UpRed else DownGreen
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(if (trade.isVirtual) "模拟" else "实盘", fontWeight = FontWeight.Medium) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (trade.isVirtual) MaterialTheme.colorScheme.primaryContainer else UpRed.copy(alpha = 0.1f),
+                            labelColor = if (trade.isVirtual) MaterialTheme.colorScheme.onPrimaryContainer else UpRed
+                        )
                     )
-                )
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(if (trade.isSuccess) "成功" else "失败", fontWeight = FontWeight.Medium) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (trade.isSuccess) UpRed.copy(alpha = 0.1f) else DownGreen.copy(alpha = 0.1f),
+                            labelColor = if (trade.isSuccess) UpRed else DownGreen
+                        )
+                    )
+                }
             }
 
             trade.sellTime?.let { sellTime ->

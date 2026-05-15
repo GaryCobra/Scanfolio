@@ -35,6 +35,8 @@ fun TradeFormSheet(
     var strategyName by remember { mutableStateOf(allStrategies.first().name) }
     var isSuccess by remember { mutableStateOf(true) }
     var strategyExpanded by remember { mutableStateOf(false) }
+    var isVirtual by remember { mutableStateOf(false) }
+    var virtualCapital by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -90,6 +92,29 @@ fun TradeFormSheet(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("模拟盘", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(checked = isVirtual, onCheckedChange = { isVirtual = it })
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(if (isVirtual) "模拟" else "实盘", color = if (isVirtual) MaterialTheme.colorScheme.primary else com.scanfolio.ui.theme.UpRed)
+                }
+                if (isVirtual) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = virtualCapital,
+                        onValueChange = { virtualCapital = it },
+                        label = { Text("虚拟资金总额") },
+                        placeholder = { Text("如：1000000") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 ExposedDropdownMenuBox(
@@ -153,7 +178,9 @@ fun TradeFormSheet(
                                     profitRatio = profitRatio.toDoubleOrNull(),
                                     profitAmount = profitAmount.toDoubleOrNull(),
                                     strategyName = strategyName,
-                                    isSuccess = isSuccess
+                                    isSuccess = isSuccess,
+                                    isVirtual = isVirtual,
+                                    virtualCapital = virtualCapital.toDoubleOrNull()
                                 )
                             )
                             onDismiss()

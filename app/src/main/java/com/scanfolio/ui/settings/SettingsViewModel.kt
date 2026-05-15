@@ -16,6 +16,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         app, app.stockRepository, app.tradeRepository, settingsRepo
     )
 
+    val marketIndexRepo = app.marketIndexRepository
+
+    val marketIndices: StateFlow<List<MarketIndexDefinitionEntity>> = marketIndexRepo.getAllDefinitions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _marketRecords = MutableStateFlow<Map<Long, List<MarketIndexDailyRecordEntity>>>(emptyMap())
+    fun getMarketRecords(indexId: Long) = _marketRecords.map { it[indexId] ?: emptyList() }
+
+    fun loadMarketRecords(indexId: Long) {
+        viewModelScope.launch {
+            marketIndexRepo.getRecordsByIndex(indexId).collect { records ->
+                _marketRecords.value = _marketRecords.value + (indexId to records)
+            }
+        }
+    }
+
     val columns: StateFlow<List<ColumnDefinitionEntity>> = settingsRepo.getAllColumns()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

@@ -76,6 +76,18 @@ fun AppNavigation() {
             composable("strategy_manage") {
                 com.scanfolio.ui.settings.StrategyManageScreen(navController)
             }
+            composable("index_manage") {
+                com.scanfolio.ui.settings.IndexManageScreen(navController)
+            }
+            composable("index_records/{indexId}/{indexName}") { backStackEntry ->
+                val indexId = backStackEntry.arguments?.getString("indexId")?.toLongOrNull() ?: return@composable
+                val indexName = backStackEntry.arguments?.getString("indexName") ?: ""
+                com.scanfolio.ui.settings.IndexRecordEntryScreen(
+                    navController = navController,
+                    indexId = indexId,
+                    indexName = indexName
+                )
+            }
         }
     }
 }
