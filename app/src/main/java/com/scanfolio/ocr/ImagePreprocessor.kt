@@ -24,7 +24,7 @@ object ImagePreprocessor {
         for (x in 0 until result.width) {
             for (y in 0 until result.height) {
                 val pixel = result.getPixel(x, y)
-                val gray = Color.red(pixel)
+                val gray = (Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3
                 val binary = if (gray > threshold) Color.WHITE else Color.BLACK
                 result.setPixel(x, y, binary)
             }

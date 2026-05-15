@@ -23,10 +23,14 @@ class OcrEngine(private val context: Context) {
     private fun copyTrainedDataIfNeeded(dir: File) {
         val targetFile = File(dir, "chi_sim.traineddata")
         if (!targetFile.exists()) {
-            context.assets.open("tessdata/chi_sim.traineddata").use { input ->
-                FileOutputStream(targetFile).use { output ->
-                    input.copyTo(output)
+            try {
+                context.assets.open("tessdata/chi_sim.traineddata").use { input ->
+                    FileOutputStream(targetFile).use { output ->
+                        input.copyTo(output)
+                    }
                 }
+            } catch (e: Exception) {
+                throw RuntimeException("Failed to copy Tesseract traineddata from assets", e)
             }
         }
     }
@@ -35,7 +39,7 @@ class OcrEngine(private val context: Context) {
         val processed = ImagePreprocessor.binarize(ImagePreprocessor.toGrayscale(bitmap))
         synchronized(tessBaseAPI) {
             tessBaseAPI.setImage(processed)
-            return tessBaseAPI.utF8Text
+            return tessBaseAPI.utf8Text
         }
     }
 
