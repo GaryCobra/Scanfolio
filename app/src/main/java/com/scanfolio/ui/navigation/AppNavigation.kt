@@ -70,6 +70,9 @@ fun AppNavigation() {
             composable("settings") {
                 com.scanfolio.ui.settings.SettingsScreen(navController)
             }
+            composable("manual_stock_entry") {
+                com.scanfolio.ui.portfolio.ManualStockEntryScreen(navController)
+            }
             composable("column_manage") {
                 com.scanfolio.ui.settings.ColumnManageScreen(navController)
             }
