@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 fun TradeFormSheet(
     stockId: Long,
     viewModel: StockDetailViewModel,
+    editTrade: TradeRecordEntity? = null,
     onDismiss: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -27,16 +28,16 @@ fun TradeFormSheet(
         if (strategies.isEmpty()) listOf(StrategyTypeEntity(name = "爆量")) else strategies
     }
 
-    var buyTime by remember { mutableStateOf("") }
-    var buyPrice by remember { mutableStateOf("") }
-    var sellTime by remember { mutableStateOf("") }
-    var profitRatio by remember { mutableStateOf("") }
-    var profitAmount by remember { mutableStateOf("") }
-    var strategyName by remember { mutableStateOf(allStrategies.first().name) }
-    var isSuccess by remember { mutableStateOf(true) }
-    var strategyExpanded by remember { mutableStateOf(false) }
-    var isVirtual by remember { mutableStateOf(false) }
-    var virtualCapital by remember { mutableStateOf("") }
+    var buyTime by remember(editTrade) { mutableStateOf(editTrade?.let { DateUtils.formatTimestamp(it.buyTime) } ?: "") }
+    var buyPrice by remember(editTrade) { mutableStateOf(editTrade?.buyPrice?.let { "%.2f".format(it) } ?: "") }
+    var sellTime by remember(editTrade) { mutableStateOf(editTrade?.sellTime?.let { DateUtils.formatTimestamp(it) } ?: "") }
+    var profitRatio by remember(editTrade) { mutableStateOf(editTrade?.profitRatio?.let { "%.2f".format(it) } ?: "") }
+    var profitAmount by remember(editTrade) { mutableStateOf(editTrade?.profitAmount?.let { "%.2f".format(it) } ?: "") }
+    var strategyName by remember(editTrade) { mutableStateOf(editTrade?.strategyName ?: allStrategies.first().name) }
+    var isSuccess by remember(editTrade) { mutableStateOf(editTrade?.isSuccess ?: true) }
+    var strategyExpanded by remember(editTrade) { mutableStateOf(false) }
+    var isVirtual by remember(editTrade) { mutableStateOf(editTrade?.isVirtual ?: false) }
+    var virtualCapital by remember(editTrade) { mutableStateOf(editTrade?.virtualCapital?.let { "%.2f".format(it) } ?: "") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -45,7 +46,7 @@ fun TradeFormSheet(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    "添加交易记录",
+                    if (editTrade != null) "编辑交易记录" else "添加交易记录",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -168,21 +169,25 @@ fun TradeFormSheet(
                             val sellTimeMs = DateUtils.parseTimestamp(sellTime)
                             val duration = if (sellTimeMs != null) (sellTimeMs - buyTimeMs) / 1000 else null
 
-                            viewModel.tradeRepo.insert(
-                                TradeRecordEntity(
-                                    stockRecordId = stockId,
-                                    buyTime = buyTimeMs,
-                                    buyPrice = buyPrice.toDoubleOrNull() ?: 0.0,
-                                    sellTime = sellTimeMs,
-                                    holdingDuration = duration,
-                                    profitRatio = profitRatio.toDoubleOrNull(),
-                                    profitAmount = profitAmount.toDoubleOrNull(),
-                                    strategyName = strategyName,
-                                    isSuccess = isSuccess,
-                                    isVirtual = isVirtual,
-                                    virtualCapital = virtualCapital.toDoubleOrNull()
-                                )
+                            val entity = TradeRecordEntity(
+                                id = editTrade?.id ?: 0,
+                                stockRecordId = stockId,
+                                buyTime = buyTimeMs,
+                                buyPrice = buyPrice.toDoubleOrNull() ?: 0.0,
+                                sellTime = sellTimeMs,
+                                holdingDuration = duration,
+                                profitRatio = profitRatio.toDoubleOrNull(),
+                                profitAmount = profitAmount.toDoubleOrNull(),
+                                strategyName = strategyName,
+                                isSuccess = isSuccess,
+                                isVirtual = isVirtual,
+                                virtualCapital = virtualCapital.toDoubleOrNull()
                             )
+                            if (editTrade != null) {
+                                viewModel.updateTrade(entity)
+                            } else {
+                                viewModel.tradeRepo.insert(entity)
+                            }
                             onDismiss()
                         }
                     }) { Text("保存") }
