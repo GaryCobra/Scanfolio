@@ -181,7 +181,8 @@ fun TradeFormSheet(
                                 strategyName = strategyName,
                                 isSuccess = isSuccess,
                                 isVirtual = isVirtual,
-                                virtualCapital = virtualCapital.toDoubleOrNull()
+                                virtualCapital = virtualCapital.toDoubleOrNull(),
+                                createdAt = editTrade?.createdAt ?: System.currentTimeMillis()
                             )
                             if (editTrade != null) {
                                 viewModel.updateTrade(entity)

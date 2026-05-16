@@ -2,6 +2,7 @@ package com.scanfolio.ui.scan
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -22,15 +23,21 @@ import androidx.navigation.NavController
 @Composable
 fun ScanScreen(
     navController: NavController,
-    viewModel: ScanViewModel = viewModel()
+    viewModel: ScanViewModel = viewModel(LocalContext.current as ComponentActivity)
 ) {
     val context = LocalContext.current
     val isProcessing by viewModel.isProcessing.collectAsState()
     val result by viewModel.ocrResult.collectAsState()
     val error by viewModel.error.collectAsState()
+    var hasNavigatedToPreview by remember { mutableStateOf(false) }
 
-    LaunchedEffect(result) {
-        if (result != null && result.rows.isNotEmpty()) {
+    LaunchedEffect(result, isProcessing) {
+        if (isProcessing) {
+            hasNavigatedToPreview = false
+        }
+        val r = result
+        if (r != null && r.rows.isNotEmpty() && !hasNavigatedToPreview) {
+            hasNavigatedToPreview = true
             navController.navigate("preview")
         }
     }

@@ -34,6 +34,12 @@ fun PortfolioScreen(
     val dashboardStats by viewModel.dashboardStats.collectAsState()
     val listState = rememberLazyListState()
 
+    LaunchedEffect(stocks) {
+        if (stocks.isNotEmpty()) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

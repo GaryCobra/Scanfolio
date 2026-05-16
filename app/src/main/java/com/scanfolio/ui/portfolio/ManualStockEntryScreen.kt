@@ -39,21 +39,16 @@ fun ManualStockEntryScreen(
             )
         }
     ) { padding ->
+        if (saved) {
+            LaunchedEffect(Unit) {
+                navController.popBackStack()
+            }
+        }
+
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)
         ) {
-            if (saved) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null,
-                            modifier = Modifier.size(64.dp), tint = com.scanfolio.ui.theme.UpRed)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("添加成功！", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(onClick = { navController.popBackStack() }) { Text("返回持仓") }
-                    }
-                }
-            } else {
+            if (!saved) {
                 OutlinedTextField(
                     value = code,
                     onValueChange = { code = it.take(6) },

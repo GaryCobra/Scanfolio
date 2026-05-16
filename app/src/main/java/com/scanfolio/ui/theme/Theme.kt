@@ -9,9 +9,6 @@ val UpRed = Color(0xFFE53935)
 val DownGreen = Color(0xFF4CAF50)
 val UpRedLight = Color(0xFFFFCDD2)
 val DownGreenLight = Color(0xFFC8E6C9)
-val UpRedSoft = Color(0xFFFCE4EC)
-val DownGreenSoft = Color(0xFFE8F5E9)
-
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFF3a7bd1),
     onPrimary = Color.White,

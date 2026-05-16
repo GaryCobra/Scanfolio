@@ -1,5 +1,6 @@
 package com.scanfolio.ui.scan
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -20,11 +22,12 @@ import androidx.navigation.NavController
 @Composable
 fun PreviewScreen(
     navController: NavController,
-    viewModel: ScanViewModel = viewModel()
+    viewModel: ScanViewModel = viewModel(LocalContext.current as ComponentActivity)
 ) {
     val headers by viewModel.previewHeaders.collectAsState()
     val rows by viewModel.previewRows.collectAsState()
     val imported by viewModel.imported.collectAsState()
+    val importedCount by viewModel.importedCount.collectAsState()
 
     if (imported) {
         Scaffold(
@@ -41,9 +44,12 @@ fun PreviewScreen(
                     Icon(Icons.Default.CheckCircle, contentDescription = null,
                         modifier = Modifier.size(64.dp), tint = com.scanfolio.ui.theme.UpRed)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("共导入 ${rows.size} 只股票", style = MaterialTheme.typography.titleMedium)
+                    Text("共导入 $importedCount 只股票", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = { navController.navigate("portfolio") }) { Text("查看持仓") }
+                    Button(onClick = {
+                        navController.popBackStack("scan", inclusive = true)
+                        navController.navigate("portfolio")
+                    }) { Text("查看持仓") }
                 }
             }
         }
