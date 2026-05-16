@@ -28,7 +28,12 @@ fun ScanScreen(
     val isProcessing by viewModel.isProcessing.collectAsState()
     val result by viewModel.ocrResult.collectAsState()
     val error by viewModel.error.collectAsState()
-    val imported by viewModel.imported.collectAsState()
+
+    LaunchedEffect(result) {
+        if (result != null && result.rows.isNotEmpty()) {
+            navController.navigate("preview")
+        }
+    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -67,22 +72,6 @@ fun ScanScreen(
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("正在识别截图...")
-                }
-            } else if (imported) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = com.scanfolio.ui.theme.UpRed
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("导入成功！", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    result?.let { Text("共导入 ${it.rows.size} 只股票") }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = { navController.navigate("portfolio") }) {
-                        Text("查看持仓")
-                    }
                 }
             } else {
                 Column(

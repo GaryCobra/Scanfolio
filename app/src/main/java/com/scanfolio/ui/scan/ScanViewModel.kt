@@ -5,7 +5,9 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.scanfolio.ScanfolioApp
+import com.scanfolio.ocr.OcrRow
 import com.scanfolio.ocr.TableAnalyzer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -24,11 +26,19 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     private val _imported = MutableStateFlow(false)
     val imported: StateFlow<Boolean> = _imported.asStateFlow()
 
+    private val _previewRows = MutableStateFlow<List<OcrRow>>(emptyList())
+    val previewRows: StateFlow<List<OcrRow>> = _previewRows.asStateFlow()
+
+    private val _previewHeaders = MutableStateFlow<List<String>>(emptyList())
+    val previewHeaders: StateFlow<List<String>> = _previewHeaders.asStateFlow()
+
     fun processImage(bitmap: Bitmap) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.Default) {
             _isProcessing.value = true
             _error.value = null
             _imported.value = false
+            _previewRows.value = emptyList()
+            _previewHeaders.value = emptyList()
             try {
                 if (app.ocrEngine.getInitError() != null) {
                     _error.value = app.ocrEngine.getInitError()
@@ -37,9 +47,12 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
                 val result = app.tableAnalyzer.analyze(bitmap)
                 if (result.rows.isEmpty()) {
                     _error.value = "未识别到有效表格数据，请确认是同花顺股票列表截图"
+                    return@launch
                 }
                 _ocrResult.value = result
-            } catch (e: java.lang.IllegalStateException) {
+                _previewHeaders.value = result.headers
+                _previewRows.value = result.rows.toList()
+            } catch (e: IllegalStateException) {
                 _error.value = e.message ?: "OCR引擎未就绪"
             } catch (e: Exception) {
                 _error.value = "识别失败: ${e.message}"
@@ -49,10 +62,30 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updatePreviewCell(rowIndex: Int, columnKey: String, newValue: String) {
+        val rows = _previewRows.value.toMutableList()
+        if (rowIndex >= rows.size) return
+        val old = rows[rowIndex]
+        val newData = old.data.toMutableMap()
+        newData[columnKey] = newValue
+        rows[rowIndex] = old.copy(data = newData)
+        _previewRows.value = rows
+    }
+
+    fun removePreviewRow(rowIndex: Int) {
+        val rows = _previewRows.value.toMutableList()
+        if (rowIndex in rows.indices) {
+            rows.removeAt(rowIndex)
+            _previewRows.value = rows
+        }
+    }
+
     fun confirmImport() {
         viewModelScope.launch {
-            val result = _ocrResult.value ?: return@launch
-            for (row in result.rows) {
+            val rows = _previewRows.value
+            val headers = _previewHeaders.value
+            if (rows.isEmpty()) return@launch
+            for (row in rows) {
                 app.stockRepository.mergeScreenshotData(
                     code = row.stockCode,
                     name = row.stockName,
@@ -61,6 +94,8 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
             }
             _imported.value = true
             _ocrResult.value = null
+            _previewRows.value = emptyList()
+            _previewHeaders.value = emptyList()
         }
     }
 
