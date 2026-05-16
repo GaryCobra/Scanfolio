@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -28,6 +29,10 @@ fun PortfolioScreen(
 ) {
     val stocks by viewModel.stocks.collectAsState()
     val columns by viewModel.enabledColumns.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
+    val dashboardStats by viewModel.dashboardStats.collectAsState()
+    val listState = rememberLazyListState()
 
     Scaffold(
         topBar = {
@@ -45,46 +50,62 @@ fun PortfolioScreen(
             )
         }
     ) { padding ->
-        if (stocks.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.List,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "暂无股票数据",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "请先截图扫描同花顺股票列表",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            DashboardCard(stats = dashboardStats)
+
+            SearchSortBar(
+                query = searchQuery,
+                onQueryChange = viewModel::setSearchQuery,
+                sortOption = sortOption,
+                onSortChange = viewModel::setSortOption
+            )
+
+            if (stocks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.List,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            if (searchQuery.isNotBlank()) "未找到匹配股票" else "暂无股票数据",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (searchQuery.isBlank()) {
+                            Text(
+                                "请先截图扫描同花顺股票列表",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(onClick = { navController.navigate("manual_stock_entry") }) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("手动添加股票")
+                            }
+                        }
+                    }
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                items(stocks, key = { it.id }) { stock ->
-                    StockListItem(
-                        stock = stock,
-                        columns = columns,
-                        onClick = { navController.navigate("stock_detail/${stock.id}") }
-                    )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(stocks, key = { it.id }) { stock ->
+                        StockListItem(
+                            stock = stock,
+                            columns = columns,
+                            onClick = { navController.navigate("stock_detail/${stock.id}") }
+                        )
+                    }
                 }
             }
         }
