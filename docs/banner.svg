@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="50%" style="stop-color:#16213e"/>
+      <stop offset="100%" style="stop-color:#0f3460"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#3a7bd1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#bg)" rx="20"/>
+  <!-- Decorative line chart -->
+  <polyline points="100,300 200,280 300,200 400,220 500,150 600,120 700,100 800,80 900,90 1000,60 1100,40"
+    stroke="url(#line)" stroke-width="4" fill="none" opacity="0.6"/>
+  <circle cx="1100" cy="40" r="6" fill="#3a7bd1"/>
+  <!-- Title -->
+  <text x="120" y="200" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white">
+    Momentum
+  </text>
+  <text x="120" y="250" font-family="Arial, sans-serif" font-size="24" fill="#a0a0b0">
+    Stock Portfolio Tracker for A-Share Investors
+  </text>
+  <!-- Tags -->
+  <rect x="120" y="280" width="120" height="32" rx="16" fill="#3a7bd1" opacity="0.3"/>
+  <text x="180" y="302" font-family="Arial, sans-serif" font-size="14" fill="#3a7bd1" text-anchor="middle">
+    Kotlin
+  </text>
+  <rect x="255" y="280" width="120" height="32" rx="16" fill="#3a7bd1" opacity="0.3"/>
+  <text x="315" y="302" font-family="Arial, sans-serif" font-size="14" fill="#3a7bd1" text-anchor="middle">
+    Compose
+  </text>
+  <rect x="390" y="280" width="140" height="32" rx="16" fill="#3a7bd1" opacity="0.3"/>
+  <text x="460" y="302" font-family="Arial, sans-serif" font-size="14" fill="#3a7bd1" text-anchor="middle">
+    A-Share
+  </text>
+  <!-- Phone mockup -->
+  <rect x="880" y="80" width="160" height="280" rx="20" fill="#2a2a3e" stroke="#3a7bd1" stroke-width="2"/>
+  <rect x="920" y="100" width="80" height="6" rx="3" fill="#555"/>
+  <rect x="900" y="120" width="120" height="180" rx="8" fill="#1a1a2e"/>
+  <!-- Mini chart in phone -->
+  <polyline points="910,260 940,240 960,250 980,220 1000,200 1010,180"
+    stroke="#e94560" stroke-width="2" fill="none"/>
+  <line x1="900" y1="270" x2="1020" y2="270" stroke="#333" stroke-width="1"/>
+  <rect x="900" y="310" width="120" height="30" rx="4" fill="#3a7bd1" opacity="0.5"/>
+</svg>
