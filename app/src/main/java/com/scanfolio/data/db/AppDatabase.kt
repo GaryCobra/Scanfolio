@@ -29,7 +29,7 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         MarketIndexDefinitionEntity::class,
         MarketIndexDailyRecordEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -39,16 +39,24 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun columnDefinitionDao(): ColumnDefinitionDao
     abstract fun strategyTypeDao(): StrategyTypeDao
     abstract fun marketIndexDefinitionDao(): MarketIndexDefinitionDao
-    abstract fun marketIndexDailyRecordDao(): MarketIndexDailyRecordDao
+        abstract fun marketIndexDailyRecordDao(): MarketIndexDailyRecordDao
 
     companion object {
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `stock_records` ADD COLUMN `strategy_name` TEXT")
+                db.execSQL("ALTER TABLE `trade_records` ADD COLUMN `quantity` INTEGER")
+            }
+        }
+
         @Volatile private var INSTANCE: AppDatabase? = null
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext, AppDatabase::class.java, "scanfolio.db"
-                ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { INSTANCE = it }
             }
         }
     }

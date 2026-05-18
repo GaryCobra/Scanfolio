@@ -22,6 +22,7 @@ data class TradeRecordEntity(
     @ColumnInfo(name = "profit_ratio") val profitRatio: Double? = null,
     @ColumnInfo(name = "profit_amount") val profitAmount: Double? = null,
     @ColumnInfo(name = "strategy_name") val strategyName: String,
+    @ColumnInfo(name = "quantity") val quantity: Int? = null,
     @ColumnInfo(name = "is_success") val isSuccess: Boolean,
     @ColumnInfo(name = "is_virtual") val isVirtual: Boolean = false,
     @ColumnInfo(name = "virtual_capital") val virtualCapital: Double? = null,

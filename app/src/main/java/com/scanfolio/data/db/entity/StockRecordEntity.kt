@@ -11,6 +11,8 @@ data class StockRecordEntity(
     val dataColumns: Map<String, String> = emptyMap(),
     @ColumnInfo(name = "last_screenshot")
     val lastScreenshot: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "strategy_name")
+    val strategyName: String? = null,
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()
 )

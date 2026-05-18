@@ -9,6 +9,9 @@ interface StockRecordDao {
     @Query("SELECT * FROM stock_records ORDER BY last_screenshot DESC")
     fun getAll(): Flow<List<StockRecordEntity>>
 
+    @Query("SELECT * FROM stock_records ORDER BY strategy_name, last_screenshot DESC")
+    fun getAllGrouped(): Flow<List<StockRecordEntity>>
+
     @Query("SELECT * FROM stock_records WHERE id = :id")
     suspend fun getById(id: Long): StockRecordEntity?
 
