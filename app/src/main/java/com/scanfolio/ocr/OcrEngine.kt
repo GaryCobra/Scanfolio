@@ -2,75 +2,108 @@ package com.scanfolio.ocr
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.googlecode.tesseract.android.TessBaseAPI
-import java.io.File
-import java.io.FileOutputStream
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.google.android.gms.tasks.Tasks
 
 class OcrEngine(private val context: Context) {
+    private val recognizer = TextRecognition.getClient(
+        ChineseTextRecognizerOptions.Builder().build()
+    )
 
-    private var tessApi: TessBaseAPI? = null
-    private var initError: String? = null
+    enum class OcrSource { ML_KIT, PREPROCESSED_ML_KIT, BAIDU_API }
 
-    fun getTessApi(): TessBaseAPI? {
-        if (tessApi == null && initError == null) {
-            try {
-                val datapath = context.filesDir.absolutePath + File.separator + "tesseract"
-                val tessDir = File(datapath + File.separator + "tessdata")
-                if (!tessDir.exists()) tessDir.mkdirs()
-                copyTrainedDataIfNeeded(tessDir)
+    data class OcrBlock(
+        val text: String,
+        val lines: List<OcrLine>
+    )
 
-                TessBaseAPI().apply {
-                    init(datapath, "chi_sim")
-                    setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK)
-                    tessApi = this
-                }
-            } catch (e: Exception) {
-                initError = "初始化OCR引擎失败: ${e.message}"
+    data class OcrLine(
+        val text: String,
+        val elements: List<OcrElement>
+    )
+
+    data class OcrElement(
+        val text: String,
+        val left: Int,
+        val top: Int,
+        val right: Int,
+        val bottom: Int
+    )
+
+    data class OcrResult(
+        val text: String,
+        val source: OcrSource,
+        val blocks: List<OcrBlock>? = null
+    )
+
+    fun recognizeText(bitmap: Bitmap, baiduApiKey: String? = null, baiduSecretKey: String? = null): OcrResult? {
+        val mlResult = recognizeWithMlKit(bitmap)
+        if (mlResult != null && mlResult.text.isNotBlank() && hasReasonableContent(mlResult.text)) {
+            return OcrResult(mlResult.text, OcrSource.ML_KIT, mlResult.blocks)
+        }
+
+        val preprocessed = ImagePreprocessor.enhanceForOcr(bitmap)
+        val mlRetry = recognizeWithMlKit(preprocessed)
+        if (mlRetry != null && mlRetry.text.isNotBlank() && hasReasonableContent(mlRetry.text)) {
+            return OcrResult(mlRetry.text, OcrSource.PREPROCESSED_ML_KIT, mlRetry.blocks)
+        }
+
+        if (!baiduApiKey.isNullOrBlank() && !baiduSecretKey.isNullOrBlank()) {
+            val baiduResult = runCatching {
+                BaiduOcrApi(baiduApiKey, baiduSecretKey).recognizeText(bitmap)
+            }.getOrNull()
+            if (!baiduResult.isNullOrBlank()) {
+                return OcrResult(baiduResult, OcrSource.BAIDU_API)
             }
         }
-        return tessApi
+
+        return null
     }
 
-    fun getInitError(): String? = initError
-
-    private fun copyTrainedDataIfNeeded(dir: File) {
-        val targetFile = File(dir, "chi_sim.traineddata")
-        if (!targetFile.exists()) {
-            try {
-                context.assets.open("tessdata/chi_sim.traineddata").use { input ->
-                    FileOutputStream(targetFile).use { output ->
-                        input.copyTo(output)
+    private fun recognizeWithMlKit(bitmap: Bitmap): MlKitResult? {
+        return try {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            val text = Tasks.await(recognizer.process(image))
+            val blocks = text.textBlocks.map { block ->
+                OcrBlock(
+                    text = block.text,
+                    lines = block.lines.map { line ->
+                        OcrLine(
+                            text = line.text,
+                            elements = line.elements.map { elem ->
+                                val box = elem.boundingBox
+                                OcrElement(
+                                    text = elem.text,
+                                    left = box?.left ?: 0,
+                                    top = box?.top ?: 0,
+                                    right = box?.right ?: 0,
+                                    bottom = box?.bottom ?: 0
+                                )
+                            }
+                        )
                     }
-                }
-            } catch (e: Exception) {
-                throw RuntimeException("训练数据文件缺失", e)
+                )
             }
+            MlKitResult(text.text, blocks)
+        } catch (e: Exception) {
+            null
         }
     }
 
-    fun recognizeText(bitmap: Bitmap): String {
-        val resized = downscaleBitmap(bitmap, 2048)
-        val processed = ImagePreprocessor.binarize(ImagePreprocessor.toGrayscale(resized))
-        val api = getTessApi() ?: throw IllegalStateException(initError ?: "OCR引擎未初始化")
-        synchronized(api) {
-            api.setImage(processed)
-            return api.getUTF8Text()
-        }
+    private fun hasReasonableContent(text: String): Boolean {
+        val stockCodeRegex = Regex("\\d{6}")
+        val chineseRegex = Regex("[\\u4e00-\\u9fff]")
+        return stockCodeRegex.containsMatchIn(text) || chineseRegex.containsMatchIn(text)
     }
 
-    private fun downscaleBitmap(bitmap: Bitmap, maxDimension: Int): Bitmap {
-        val (w, h) = bitmap.width to bitmap.height
-        if (w <= maxDimension && h <= maxDimension) return bitmap
-        val ratio = maxDimension.toFloat() / maxOf(w, h)
-        val newW = (w * ratio).toInt()
-        val newH = (h * ratio).toInt()
-        return Bitmap.createScaledBitmap(bitmap, newW, newH, true)
-    }
+    private data class MlKitResult(
+        val text: String,
+        val blocks: List<OcrBlock>
+    )
 
     fun release() {
-        try {
-            tessApi?.end()
-        } catch (_: Exception) {}
+        recognizer.close()
     }
 }
