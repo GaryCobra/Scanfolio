@@ -1,8 +1,10 @@
 package com.scanfolio.data.api
 
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -84,7 +86,7 @@ class StockApiClient(private val okHttp: OkHttpClient) {
     fun fetchFullQuote(code: String): StockQuote? {
         val exchange = determineExchange(code)
         val secId = if (exchange == "SH") "1.$code" else "0.$code"
-        val fields = "f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f55,f57,f58,f60,f116,f117,f162,f167,f168,f169,f170,f171,f127,f128,f140"
+        val fields = "f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f55,f57,f58,f60,f116,f117,f162,f167,f168,f169,f170,f171,f127,f128,f140,f170"
         val url = "https://push2.eastmoney.com/api/qt/stock/get?secid=$secId&fields=$fields"
         return try {
             val resp = jsonOkHttp.newCall(Request.Builder().url(url).get().build()).execute()
@@ -98,7 +100,7 @@ class StockApiClient(private val okHttp: OkHttpClient) {
                 exchange = exchange,
                 currentPrice = price,
                 changePercent = json.optDouble("f55", 0.0),
-                changeAmount = json.optDouble("f55", 0.0) * yestClose / 100.0,
+                changeAmount = json.optDouble("f170", 0.0),
                 open = json.optDouble("f46", 0.0),
                 high = json.optDouble("f44", 0.0),
                 low = json.optDouble("f45", 0.0),
@@ -154,13 +156,12 @@ class StockApiClient(private val okHttp: OkHttpClient) {
 
     internal fun parseKlineResponse(raw: String, days: Int): List<KlineData> {
         return try {
-            val json = JSONObject(raw)
-            val data = json.optJSONObject("data") ?: return emptyList()
-            val klinesStr = data.optString("klines", "")
-            if (klinesStr.isEmpty()) return emptyList()
-            val lines = JSONArray(klinesStr)
-            (0 until minOf(lines.length(), days)).map { i ->
-                val parts = lines.getString(i).split(",")
+            val gson = Gson()
+            val root = gson.fromJson(raw, JsonObject::class.java)
+            val data = root.get("data")?.asJsonObject ?: return emptyList()
+            val klines = data.get("klines")?.asJsonArray ?: return emptyList()
+            (0 until minOf(klines.size(), days)).map { i ->
+                val parts = klines.get(i).asString.split(",")
                 KlineData(
                     day = parts[0],
                     open = parts[1].toDoubleOrNull() ?: 0.0,
@@ -248,7 +249,7 @@ class StockApiClient(private val okHttp: OkHttpClient) {
         return map
     }
 
-    private fun countConsecutiveUp(kline: List<KlineData>): Int {
+    internal fun countConsecutiveUp(kline: List<KlineData>): Int {
         var count = 0
         for (k in kline) {
             if (k.close >= k.open) count++
@@ -257,7 +258,7 @@ class StockApiClient(private val okHttp: OkHttpClient) {
         return count
     }
 
-    private fun formatMoney(value: Double): String {
+    internal fun formatMoney(value: Double): String {
         return when {
             value >= 100000000 -> "%.2f亿".format(value / 100000000.0)
             value >= 10000 -> "%.2f万".format(value / 10000.0)
