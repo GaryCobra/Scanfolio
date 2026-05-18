@@ -104,37 +104,6 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
-                val apiKey by viewModel.baiduApiKey.collectAsState()
-                val secretKey by viewModel.baiduSecretKey.collectAsState()
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("百度OCR配置（可选）", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("当本地OCR识别失败时自动使用百度OCR API回退。在 https://console.bce.baidu.com/ai/#/ai/ocr/overview/index 注册获取", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = apiKey,
-                        onValueChange = { viewModel.updateBaiduOcrKeys(it, secretKey) },
-                        label = { Text("API Key") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = secretKey,
-                        onValueChange = { viewModel.updateBaiduOcrKeys(apiKey, it) },
-                        label = { Text("Secret Key") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("数据导入导出", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
