@@ -1,15 +1,7 @@
 package com.scanfolio.ui.scan
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
-import android.net.Uri
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,175 +9,220 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.scanfolio.ui.theme.DownGreen
+import com.scanfolio.ui.theme.UpRed
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanScreen(
     navController: NavController,
-    viewModel: ScanViewModel = viewModel(LocalContext.current as ComponentActivity)
+    viewModel: ScanViewModel = viewModel()
 ) {
-    val context = LocalContext.current
-    val isProcessing by viewModel.isProcessing.collectAsState()
-    val result by viewModel.ocrResult.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResult by viewModel.searchResult.collectAsState()
+    val isSearching by viewModel.isSearching.collectAsState()
     val error by viewModel.error.collectAsState()
-    val processedCount by viewModel.processedCount.collectAsState()
-    var hasNavigatedToPreview by remember { mutableStateOf(false) }
-    var titleTapCount by remember { mutableIntStateOf(0) }
-    var lastTapTime by remember { mutableLongStateOf(0L) }
-    var showDebug by remember { mutableStateOf(false) }
+    val addedMessage by viewModel.addedMessage.collectAsState()
+    val strategies by viewModel.strategies.collectAsState()
 
-    LaunchedEffect(result, isProcessing) {
-        if (isProcessing) {
-            hasNavigatedToPreview = false
-        }
-        val r = result
-        if (r != null && r.rows.isNotEmpty() && !hasNavigatedToPreview) {
-            hasNavigatedToPreview = true
-            navController.navigate("preview")
-        }
-    }
+    var selectedStrategy by remember { mutableStateOf<String?>(null) }
+    var showStrategyPicker by remember { mutableStateOf(false) }
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris: List<Uri> ->
-        if (uris.isNotEmpty()) {
-            viewModel.processImages(uris, context.contentResolver)
-        }
-    }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (!isGranted) {
-            viewModel.setError("需要相机权限才能拍照")
+    LaunchedEffect(addedMessage) {
+        addedMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearAddedMessage()
         }
-    }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        bitmap?.let { viewModel.processImage(it) }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text("截图识别",
-                        modifier = Modifier.clickable {
-                            val now = System.currentTimeMillis()
-                            if (now - lastTapTime > 3000) titleTapCount = 1
-                            else titleTapCount++
-                            lastTapTime = now
-                            if (titleTapCount >= 5) {
-                                titleTapCount = 0
-                                showDebug = true
-                            }
-                        })
-                },
+                title = { Text("添加自选", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isProcessing) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.updateQuery(it) },
+                label = { Text("输入6位股票代码") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("例如: 600036") }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when {
+                isSearching -> {
                     CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("正在识别截图... ($processedCount 只)", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("正在查询...")
                 }
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
+
+                error != null -> {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Text(
+                            error!!,
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+
+                searchResult != null -> {
+                    val quote = searchResult!!
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = quote.code,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = quote.name,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Text(
+                                    text = "%.2f".format(quote.currentPrice),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                val changeColor = when {
+                                    quote.changePercent > 0 -> UpRed
+                                    quote.changePercent < 0 -> DownGreen
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = if (quote.changePercent >= 0) "+%.2f%%".format(quote.changePercent) else "%.2f%%".format(quote.changePercent),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = changeColor
+                                    )
+                                    Text(
+                                        text = if (quote.changeAmount >= 0) "+%.2f".format(quote.changeAmount) else "%.2f".format(quote.changeAmount),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = changeColor
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            OutlinedButton(
+                                onClick = { showStrategyPicker = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Folder, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(selectedStrategy ?: "选择分组（可选）")
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = { viewModel.addStock(selectedStrategy) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("加入自选")
+                            }
+                        }
+                    }
+                }
+
+                else -> {
                     Icon(
-                        Icons.Default.CameraAlt,
+                        Icons.Default.TravelExplore,
                         contentDescription = null,
-                        modifier = Modifier.size(72.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "选择同花顺股票列表截图进行识别\n支持一次性选择多张图片",
+                        "输入股票代码查询并加入自选",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    Button(
-                        onClick = {
-                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                                cameraLauncher.launch(null)
-                            } else {
-                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(0.6f)
-                    ) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("拍照")
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { imagePickerLauncher.launch("image/*") },
-                        modifier = Modifier.fillMaxWidth(0.6f)
-                    ) {
-                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("从相册选择（可多选）")
-                    }
-
-                    error?.let {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            )
-                        ) {
-                            Text(
-                                it,
-                                modifier = Modifier.padding(12.dp),
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
-                    }
                 }
             }
         }
     }
 
-    val rawText by viewModel.rawOcrText.collectAsState()
-
-    if (showDebug && rawText != null) {
+    if (showStrategyPicker) {
         AlertDialog(
-            onDismissRequest = { showDebug = false; viewModel.clearRawOcrText() },
-            title = { Text("原始OCR文本") },
+            onDismissRequest = { showStrategyPicker = false },
+            title = { Text("选择分组") },
             text = {
-                SelectionContainer {
-                    Text(rawText!!, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                Column {
+                    TextButton(
+                        onClick = {
+                            selectedStrategy = null
+                            showStrategyPicker = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("不分组")
+                    }
+                    if (strategies.isEmpty()) {
+                        Text("暂无分组，请先在设置中创建战法", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    strategies.forEach { strategy ->
+                        TextButton(
+                            onClick = {
+                                selectedStrategy = strategy.name
+                                showStrategyPicker = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(strategy.name)
+                        }
+                    }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDebug = false; viewModel.clearRawOcrText() }) {
-                    Text("关闭")
-                }
+                TextButton(onClick = { showStrategyPicker = false }) { Text("取消") }
             }
         )
     }
