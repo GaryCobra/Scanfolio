@@ -1,6 +1,9 @@
 package com.scanfolio.ui.scan
 
+import android.content.ContentResolver
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import com.scanfolio.ScanfolioApp
 import com.scanfolio.data.repository.StockRepository
 import com.scanfolio.ocr.OcrEngine
@@ -16,6 +19,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.InputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScanViewModelTest {
@@ -35,20 +39,22 @@ class ScanViewModelTest {
         every { mockApp.ocrEngine } returns mockOcrEngine
         every { mockApp.tableAnalyzer } returns mockTableAnalyzer
         every { mockApp.stockRepository } returns mockStockRepo
+        every { mockApp.getBaiduOcrApiKey() } returns null
+        every { mockApp.getBaiduOcrSecretKey() } returns null
 
         viewModel = ScanViewModel(mockApp)
-        every { mockOcrEngine.getInitError() } returns null
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkAll()
     }
 
     private fun mockBitmap(): Bitmap = mockk(relaxed = true)
 
     private fun setupPreviewData(rows: List<OcrRow>, headers: List<String>) {
-        every { mockTableAnalyzer.analyze(any()) } returns TableAnalyzer.TableResult(headers, rows)
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } returns TableAnalyzer.TableResult(headers, rows)
         runTest(testDispatcher) {
             viewModel.processImageInternal(mockBitmap())
         }
@@ -58,7 +64,7 @@ class ScanViewModelTest {
 
     @Test
     fun `processImageInternal clears ocrResult on start`() = runTest(testDispatcher) {
-        every { mockTableAnalyzer.analyze(any()) } throws RuntimeException("stop here")
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } throws RuntimeException("stop here")
 
         viewModel.processImageInternal(mockBitmap())
 
@@ -69,23 +75,13 @@ class ScanViewModelTest {
     }
 
     @Test
-    fun `processImageInternal sets error on init failure`() = runTest(testDispatcher) {
-        every { mockOcrEngine.getInitError() } returns "Tesseract not initialized"
-
-        viewModel.processImageInternal(mockBitmap())
-
-        assertEquals("Tesseract not initialized", viewModel.error.value)
-        assertEquals(false, viewModel.isProcessing.value)
-    }
-
-    @Test
     fun `processImageInternal sets preview data on success`() = runTest(testDispatcher) {
         val headers = listOf("代码名称", "涨跌幅", "现价")
         val rows = listOf(
             OcrRow("000001", "平安银行", mapOf("涨跌幅" to "+2.5%", "现价" to "12.34")),
             OcrRow("000002", "万科A", mapOf("涨跌幅" to "-1.2%", "现价" to "8.56"))
         )
-        every { mockTableAnalyzer.analyze(any()) } returns TableAnalyzer.TableResult(headers, rows)
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } returns TableAnalyzer.TableResult(headers, rows)
 
         viewModel.processImageInternal(mockBitmap())
 
@@ -98,7 +94,7 @@ class ScanViewModelTest {
 
     @Test
     fun `processImageInternal sets error on empty result`() = runTest(testDispatcher) {
-        every { mockTableAnalyzer.analyze(any()) } returns TableAnalyzer.TableResult(emptyList(), emptyList())
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } returns TableAnalyzer.TableResult(emptyList(), emptyList())
 
         viewModel.processImageInternal(mockBitmap())
 
@@ -108,7 +104,7 @@ class ScanViewModelTest {
 
     @Test
     fun `processImageInternal sets isProcessing false on exception`() = runTest(testDispatcher) {
-        every { mockTableAnalyzer.analyze(any()) } throws RuntimeException("分析失败")
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } throws RuntimeException("分析失败")
 
         viewModel.processImageInternal(mockBitmap())
 
@@ -219,5 +215,69 @@ class ScanViewModelTest {
 
         assertEquals(false, viewModel.imported.value)
         coVerify(exactly = 0) { mockStockRepo.mergeScreenshotData(any(), any(), any()) }
+    }
+
+    // --- processImagesInternal ---
+
+    private fun mockBatchContentResolver(): ContentResolver {
+        val mockStream = mockk<InputStream>(relaxed = true)
+        val cr = mockk<ContentResolver>()
+        every { cr.openInputStream(any()) } returns mockStream
+        mockkStatic(BitmapFactory::class)
+        every { BitmapFactory.decodeStream(any(), any(), any()) } returns mockk<Bitmap>(relaxed = true)
+        return cr
+    }
+
+    @Test
+    fun `batch processing merges duplicate stocks by code`() = runTest(testDispatcher) {
+        val headers = listOf("代码名称", "涨跌幅")
+        val firstBatch = listOf(
+            OcrRow("000001", "平安银行", mapOf("涨跌幅" to "+2.5%"))
+        )
+        val secondBatch = listOf(
+            OcrRow("000001", "平安银行", mapOf("涨跌幅" to "+3.0%"))
+        )
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } returnsMany listOf(
+            TableAnalyzer.TableResult(headers, firstBatch),
+            TableAnalyzer.TableResult(headers, secondBatch)
+        )
+
+        val uris = listOf(mockk<Uri>(relaxed = true), mockk<Uri>(relaxed = true))
+        val contentResolver = mockBatchContentResolver()
+
+        viewModel.processImagesInternal(uris, contentResolver)
+
+        assertEquals(1, viewModel.previewRows.value.size)
+        assertEquals("000001", viewModel.previewRows.value[0].stockCode)
+        assertEquals("+2.5%", viewModel.previewRows.value[0].data["涨跌幅"])
+    }
+
+    @Test
+    fun `batch processing sets error when all images fail`() = runTest(testDispatcher) {
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } returns TableAnalyzer.TableResult(emptyList(), emptyList())
+
+        val uris = listOf(mockk<Uri>(relaxed = true))
+        val contentResolver = mockBatchContentResolver()
+
+        viewModel.processImagesInternal(uris, contentResolver)
+
+        assertEquals("未识别到有效表格数据，请确认是同花顺股票列表截图", viewModel.error.value)
+        assertEquals(false, viewModel.isProcessing.value)
+    }
+
+    @Test
+    fun `processImagesInternal updates processedCount as images are processed`() = runTest(testDispatcher) {
+        val headers = listOf("代码名称", "涨跌幅")
+        val rows = listOf(
+            OcrRow("000001", "平安银行", mapOf("涨跌幅" to "+2.5%"))
+        )
+        every { mockTableAnalyzer.analyze(any(), any(), any()) } returns TableAnalyzer.TableResult(headers, rows)
+
+        val uris = listOf(mockk<Uri>(relaxed = true))
+        val contentResolver = mockBatchContentResolver()
+
+        viewModel.processImagesInternal(uris, contentResolver)
+
+        assertEquals(1, viewModel.processedCount.value)
     }
 }
