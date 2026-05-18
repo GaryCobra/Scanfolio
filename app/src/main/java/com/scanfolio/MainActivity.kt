@@ -7,13 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.scanfolio.ui.navigation.AppNavigation
-import com.scanfolio.ui.theme.ScanfolioTheme
+import com.scanfolio.ui.theme.MomentumTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ScanfolioTheme {
+            MomentumTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AppNavigation()
                 }

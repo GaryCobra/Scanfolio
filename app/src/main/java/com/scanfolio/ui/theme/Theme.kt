@@ -60,7 +60,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun ScanfolioTheme(
+fun MomentumTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

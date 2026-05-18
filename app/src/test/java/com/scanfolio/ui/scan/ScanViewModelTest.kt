@@ -4,7 +4,7 @@ import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import com.scanfolio.ScanfolioApp
+import com.scanfolio.MomentumApp
 import com.scanfolio.data.repository.StockRepository
 import com.scanfolio.ocr.OcrEngine
 import com.scanfolio.ocr.OcrRow
@@ -24,7 +24,7 @@ import java.io.InputStream
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScanViewModelTest {
 
-    private val mockApp = mockk<ScanfolioApp>(relaxed = true)
+    private val mockApp = mockk<MomentumApp>(relaxed = true)
     private val mockOcrEngine = mockk<OcrEngine>(relaxed = true)
     private val mockTableAnalyzer = mockk<TableAnalyzer>()
     private val mockStockRepo = mockk<StockRepository>(relaxed = true)

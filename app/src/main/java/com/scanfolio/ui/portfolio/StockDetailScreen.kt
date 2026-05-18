@@ -19,7 +19,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.scanfolio.ScanfolioApp
+import com.scanfolio.MomentumApp
 import com.scanfolio.data.db.entity.*
 import com.scanfolio.ui.theme.DownGreen
 import com.scanfolio.ui.theme.UpRed
@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class StockDetailViewModel(application: Application) : AndroidViewModel(application) {
-    private val app = application as ScanfolioApp
+    private val app = application as MomentumApp
     val stockRepo = app.stockRepository
     val tradeRepo = app.tradeRepository
     val settingsRepo = app.settingsRepository

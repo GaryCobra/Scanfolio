@@ -6,7 +6,7 @@ import com.scanfolio.data.db.AppDatabase
 import com.scanfolio.data.repository.*
 import com.scanfolio.ocr.*
 
-class ScanfolioApp : Application() {
+class MomentumApp : Application() {
     val database: AppDatabase by lazy { AppDatabase.getInstance(this) }
 
     val stockRepository by lazy { StockRepository(database.stockRecordDao()) }

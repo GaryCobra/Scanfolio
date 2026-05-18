@@ -8,7 +8,7 @@ import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.scanfolio.ScanfolioApp
+import com.scanfolio.MomentumApp
 import com.scanfolio.ocr.OcrRow
 import com.scanfolio.ocr.TableAnalyzer
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class ScanViewModel(application: Application) : AndroidViewModel(application) {
-    private val app = application as ScanfolioApp
+    private val app = application as MomentumApp
 
     private val _ocrResult = MutableStateFlow<TableAnalyzer.TableResult?>(null)
     val ocrResult: StateFlow<TableAnalyzer.TableResult?> = _ocrResult.asStateFlow()

@@ -151,7 +151,7 @@ fun SettingsScreen(
                         val context = LocalContext.current
                         Button(onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Scanfolio", it))
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Momentum", it))
                             viewModel.clearExportResult()
                         }) {
                             Icon(Icons.Default.ContentCopy, contentDescription = null)

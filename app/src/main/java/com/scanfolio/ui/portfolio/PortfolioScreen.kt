@@ -43,7 +43,7 @@ fun PortfolioScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Scanfolio", fontWeight = FontWeight.Bold) },
+                title = { Text("Momentum", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary

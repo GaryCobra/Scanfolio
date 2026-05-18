@@ -3,13 +3,13 @@ package com.scanfolio.ui.portfolio
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.scanfolio.ScanfolioApp
+import com.scanfolio.MomentumApp
 import com.scanfolio.data.db.entity.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class PortfolioViewModel(application: Application) : AndroidViewModel(application) {
-    private val app = application as ScanfolioApp
+    private val app = application as MomentumApp
     private val stockRepo = app.stockRepository
     private val tradeRepo = app.tradeRepository
     private val settingsRepo = app.settingsRepository

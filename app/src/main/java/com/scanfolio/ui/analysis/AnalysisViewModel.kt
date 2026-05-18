@@ -3,7 +3,7 @@ package com.scanfolio.ui.analysis
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.scanfolio.ScanfolioApp
+import com.scanfolio.MomentumApp
 import com.scanfolio.data.db.entity.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -24,7 +24,7 @@ data class MarketComparisonData(
 )
 
 class AnalysisViewModel(application: Application) : AndroidViewModel(application) {
-    private val app = application as ScanfolioApp
+    private val app = application as MomentumApp
     private val stockRepo = app.stockRepository
     private val tradeRepo = app.tradeRepository
     private val settingsRepo = app.settingsRepository

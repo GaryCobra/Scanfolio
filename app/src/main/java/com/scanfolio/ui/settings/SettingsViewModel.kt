@@ -3,14 +3,14 @@ package com.scanfolio.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.scanfolio.ScanfolioApp
+import com.scanfolio.MomentumApp
 import com.scanfolio.data.db.entity.*
 import com.scanfolio.util.ExportImportManager
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
-    val app = application as ScanfolioApp
+    val app = application as MomentumApp
     val settingsRepo = app.settingsRepository
     val exportImportManager = ExportImportManager(
         app, app.stockRepository, app.tradeRepository, settingsRepo

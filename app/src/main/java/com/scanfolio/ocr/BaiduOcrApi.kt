@@ -1,8 +1,6 @@
 package com.scanfolio.ocr
 
 import android.graphics.Bitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -16,9 +14,9 @@ class BaiduOcrApi(private val apiKey: String, private val secretKey: String) {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    suspend fun recognizeText(bitmap: Bitmap): String? = withContext(Dispatchers.IO) {
-        try {
-            val token = getAccessToken() ?: return@withContext null
+    fun recognizeText(bitmap: Bitmap): String? {
+        return try {
+            val token = getAccessToken() ?: return null
             val base64 = bitmapToBase64(bitmap)
             val body = FormBody.Builder()
                 .add("image", base64)
@@ -28,9 +26,9 @@ class BaiduOcrApi(private val apiKey: String, private val secretKey: String) {
                 .post(body)
                 .build()
             val response = client.newCall(request).execute()
-            val json = JSONObject(response.body?.string() ?: return@withContext null)
-            val wordsResult = json.optJSONArray("words_result") ?: return@withContext null
-            if (wordsResult.length() == 0) return@withContext null
+            val json = JSONObject(response.body?.string() ?: return null)
+            val wordsResult = json.optJSONArray("words_result") ?: return null
+            if (wordsResult.length() == 0) return null
             val sb = StringBuilder()
             for (i in 0 until wordsResult.length()) {
                 val words = wordsResult.getJSONObject(i).optString("words", "")
