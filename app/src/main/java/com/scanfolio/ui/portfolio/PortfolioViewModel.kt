@@ -29,6 +29,53 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
     val enabledColumns: StateFlow<List<ColumnDefinitionEntity>> = settingsRepo.getEnabledColumns()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    data class StockGroup(
+        val strategyName: String?,
+        val stocks: List<StockRecordEntity>,
+        val winRate: Double = 0.0,
+        val totalPnl: Double = 0.0
+    )
+
+    val groupedStocks: StateFlow<List<StockGroup>> = combine(
+        allStocks, allTrades, _searchQuery, _sortOption
+    ) { stocks, trades, query, sort ->
+        var filtered = stocks
+        if (query.isNotBlank()) {
+            val q = query.lowercase()
+            filtered = stocks.filter {
+                it.code.lowercase().contains(q) || it.name.lowercase().contains(q)
+            }
+        }
+        when (sort) {
+            SortOption.NAME_ASC -> filtered = filtered.sortedBy { it.name }
+            SortOption.NAME_DESC -> filtered = filtered.sortedByDescending { it.name }
+            SortOption.CODE -> filtered = filtered.sortedBy { it.code }
+            SortOption.LAST_SCANNED -> filtered = filtered.sortedByDescending { it.lastScreenshot }
+            SortOption.CHANGE_DESC -> filtered = filtered.sortedByDescending {
+                it.dataColumns["涨跌幅"]?.replace("%", "")?.toDoubleOrNull() ?: Double.MIN_VALUE
+            }
+            SortOption.CHANGE_ASC -> filtered = filtered.sortedBy {
+                it.dataColumns["涨跌幅"]?.replace("%", "")?.toDoubleOrNull() ?: Double.MAX_VALUE
+            }
+        }
+        val grouped = filtered.groupBy { it.strategyName }
+        grouped.map { (strategy, groupStocks) ->
+            val groupTrades = trades.filter { t ->
+                groupStocks.any { s -> s.id == t.stockRecordId }
+            }
+            val closed = groupTrades.filter { it.sellTime != null }
+            val winRate = if (closed.isNotEmpty())
+                closed.count { it.isSuccess }.toDouble() / closed.size else 0.0
+            val totalPnl = closed.sumOf { it.profitAmount ?: 0.0 }
+            StockGroup(
+                strategyName = strategy,
+                stocks = groupStocks,
+                winRate = winRate,
+                totalPnl = totalPnl
+            )
+        }.sortedBy { it.strategyName ?: "zzz" }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val stocks: StateFlow<List<StockRecordEntity>> = combine(
         allStocks, _searchQuery, _sortOption
     ) { stocks, query, sort ->

@@ -1,5 +1,6 @@
 package com.scanfolio.ui.portfolio
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,11 +21,12 @@ data class DashboardStats(
 )
 
 @Composable
-fun DashboardCard(stats: DashboardStats?) {
+fun DashboardCard(stats: DashboardStats?, onViewDetail: () -> Unit = {}) {
     if (stats == null) return
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+            .clickable(onClick = onViewDetail),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)

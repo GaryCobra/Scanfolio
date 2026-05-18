@@ -32,6 +32,8 @@ fun PortfolioScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val sortOption by viewModel.sortOption.collectAsState()
     val dashboardStats by viewModel.dashboardStats.collectAsState()
+    val groupedStocks by viewModel.groupedStocks.collectAsState()
+    val collapsedGroups = remember { mutableStateMapOf<String, Boolean>() }
     val listState = rememberLazyListState()
 
     LaunchedEffect(stocks) {
@@ -57,7 +59,10 @@ fun PortfolioScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            DashboardCard(stats = dashboardStats)
+            DashboardCard(
+                stats = dashboardStats,
+                onViewDetail = { navController.navigate("pnl_detail") }
+            )
 
             SearchSortBar(
                 query = searchQuery,
@@ -99,7 +104,7 @@ fun PortfolioScreen(
                         }
                     }
                 }
-            } else {
+            } else if (searchQuery.isNotBlank()) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -111,6 +116,36 @@ fun PortfolioScreen(
                             columns = columns,
                             onClick = { navController.navigate("stock_detail/${stock.id}") }
                         )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    groupedStocks.forEach { group ->
+                        val groupKey = group.strategyName ?: "未分组"
+                        val isCollapsed = collapsedGroups[groupKey] ?: false
+                        item {
+                            GroupHeader(
+                                name = groupKey,
+                                stockCount = group.stocks.size,
+                                winRate = group.winRate,
+                                totalPnl = group.totalPnl,
+                                expanded = !isCollapsed,
+                                onToggle = { collapsedGroups[groupKey] = !isCollapsed }
+                            )
+                        }
+                        if (!isCollapsed) {
+                            items(group.stocks, key = { it.id }) { stock ->
+                                StockListItem(
+                                    stock = stock,
+                                    columns = columns,
+                                    onClick = { navController.navigate("stock_detail/${stock.id}") }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -178,6 +213,50 @@ private fun StockListItem(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupHeader(
+    name: String,
+    stockCount: Int,
+    winRate: Double,
+    totalPnl: Double,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clickable(onClick = onToggle),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(name, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("$stockCount 只", style = MaterialTheme.typography.bodySmall)
+            }
+            if (winRate > 0) {
+                Text(
+                    "胜率: %.0f%%".format(winRate * 100),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (winRate >= 0.5) UpRed else DownGreen
+                )
             }
         }
     }
