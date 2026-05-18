@@ -39,9 +39,10 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    implementation("com.rmtheis:tess-two:9.1.0")
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
     implementation("com.google.code.gson:gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.core:core-ktx:1.15.0")
 
     testImplementation("junit:junit:4.13.2")
