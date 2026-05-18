@@ -60,6 +60,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun clearExportResult() { _exportJson.value = null }
     fun clearImportResult() { _importResult.value = null }
 
+    val baiduApiKey = MutableStateFlow(app.getBaiduOcrApiKey() ?: "")
+    val baiduSecretKey = MutableStateFlow(app.getBaiduOcrSecretKey() ?: "")
+
+    fun updateBaiduOcrKeys(apiKey: String, secretKey: String) {
+        baiduApiKey.value = apiKey
+        baiduSecretKey.value = secretKey
+        app.setBaiduOcrKeys(apiKey, secretKey)
+    }
+
     fun addDefaultColumns() {
         val defaults = listOf(
             "最新价" to "number", "涨跌幅" to "percentage", "成交量" to "number",
