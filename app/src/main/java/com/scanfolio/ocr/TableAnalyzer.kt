@@ -6,67 +6,104 @@ class TableAnalyzer(private val ocrEngine: OcrEngine) {
 
     data class TableResult(
         val headers: List<String>,
-        val rows: List<OcrRow>
+        val rows: List<OcrRow>,
+        val rawText: String = "",
+        val source: OcrEngine.OcrSource? = null
     )
 
-    fun analyze(bitmap: Bitmap): TableResult {
-        val rowBoundaries = ImagePreprocessor.detectRowBoundaries(bitmap)
-        if (rowBoundaries.size < 4) return TableResult(emptyList(), emptyList())
+    fun analyze(bitmap: Bitmap, baiduApiKey: String? = null, baiduSecretKey: String? = null): TableResult {
+        val maxDimension = 2048
+        val (w, h) = bitmap.width to bitmap.height
+        val processed = if (w > maxDimension || h > maxDimension) {
+            val ratio = maxDimension.toFloat() / maxOf(w, h)
+            Bitmap.createScaledBitmap(bitmap, (w * ratio).toInt(), (h * ratio).toInt(), true)
+        } else bitmap
 
-        val headerRow = rowBoundaries.getOrNull(0)?.let { top ->
-            rowBoundaries.getOrNull(1)?.let { bottom ->
-                if (bottom - top < 10) return@let null
-                val headerBmp = Bitmap.createBitmap(bitmap, 0, top, bitmap.width, bottom - top)
-                ocrEngine.recognizeText(headerBmp)
+        val ocrResult = ocrEngine.recognizeText(processed, baiduApiKey, baiduSecretKey)
+            ?: return TableResult(emptyList(), emptyList(), source = null)
+
+        if (ocrResult.blocks != null && ocrResult.source != OcrEngine.OcrSource.BAIDU_API) {
+            val structured = parseWithBlocks(ocrResult.blocks)
+            if (structured != null) {
+                return structured.copy(rawText = ocrResult.text, source = ocrResult.source)
             }
-        } ?: ""
+        }
 
-        val rawHeaders = parseLineToCells(headerRow)
-        val columnCount = rawHeaders.size
-        if (columnCount < 2) return TableResult(emptyList(), emptyList())
+        val fallback = parseWhitespaceDelimited(ocrResult.text)
+        return if (fallback != null) {
+            fallback.copy(rawText = ocrResult.text, source = ocrResult.source)
+        } else {
+            TableResult(emptyList(), emptyList(), rawText = ocrResult.text, source = ocrResult.source)
+        }
+    }
 
-        val headers = rawHeaders.mapIndexed { index, h ->
-            if (index == 0) "代码名称" else h.trim()
+    private fun parseWithBlocks(blocks: List<OcrEngine.OcrBlock>): TableResult? {
+        val blockLines = blocks.flatMap { it.lines }
+        if (blockLines.size < 3) return null
+
+        val allLines = mutableListOf<String>()
+        for (line in blockLines) {
+            if (line.elements.isEmpty()) continue
+            val sb = StringBuilder()
+            for (elem in line.elements) {
+                if (sb.isNotEmpty()) sb.append('\t')
+                sb.append(elem.text)
+            }
+            allLines.add(sb.toString())
+        }
+
+        return parseLines(allLines)
+    }
+
+    private fun parseWhitespaceDelimited(text: String): TableResult? {
+        val lines = text.split("\n").filter { it.isNotBlank() }
+        return parseLines(lines.map { line ->
+            line.split(Regex("\\s+")).filter { it.isNotBlank() }.joinToString("\t")
+        })
+    }
+
+    private fun parseLines(lines: List<String>): TableResult? {
+        val headerIdx = lines.indexOfFirst { line ->
+            val cells = line.split("\t")
+            cells.size >= 2 &&
+                !Regex("\\d{6}").matches(cells[0].trim()) &&
+                !Regex("\\d{1,2}:\\d{2}").matches(cells[0].trim()) &&
+                cells[0].trim().contains(Regex("[\\u4e00-\\u9fff]"))
+        }
+        if (headerIdx < 0) return null
+
+        val rawHeaders = lines[headerIdx].split("\t")
+        val headers = rawHeaders.mapIndexedNotNull { index, h ->
+            when (index) {
+                0 -> "代码名称"
+                1 -> null
+                else -> h.trim()
+            }
         }
 
         val rows = mutableListOf<OcrRow>()
-        for (i in 1 until rowBoundaries.size - 1) {
-            val top = rowBoundaries[i]
-            val bottom = rowBoundaries[i + 1]
-            if (bottom - top < 10) continue
-
-            val rowBmp = Bitmap.createBitmap(bitmap, 0, top, bitmap.width, bottom - top)
-            val rowText = ocrEngine.recognizeText(rowBmp)
-            val cells = parseLineToCells(rowText)
-            if (cells.size < 2) continue
-
-            val codeName = parseCodeAndName(cells[0])
+        for (i in (headerIdx + 1) until lines.size) {
+            val cells = lines[i].split("\t").filter { isNotBlank(it) }
+            if (cells.size < 3) continue
+            val codeName = parseCodeAndName(cells[0], if (cells.size > 1) cells[1] else "")
             if (codeName == null) continue
 
             val dataMap = mutableMapOf<String, String>()
-            for (j in 1 until cells.size.coerceAtMost(headers.size)) {
-                dataMap[headers[j]] = cells[j].trim()
+            val dataCount = (cells.size - 2).coerceAtMost(headers.size - 1)
+            for (j in 0 until dataCount) {
+                dataMap[headers[j + 1]] = cells[j + 2].trim()
             }
-
-            rows.add(OcrRow(
-                stockCode = codeName.first,
-                stockName = codeName.second,
-                data = dataMap
-            ))
+            rows.add(OcrRow(codeName.first, codeName.second, dataMap))
         }
 
-        return TableResult(headers = headers, rows = rows)
+        return if (rows.isEmpty()) null
+        else TableResult(headers = headers, rows = rows)
     }
 
-    private fun parseLineToCells(text: String): List<String> {
-        return text.split("\n")
-            .firstOrNull()?.split(Regex("\\s{2,}"))
-            ?.filter { it.isNotBlank() }
-            ?: emptyList()
-    }
+    private fun isNotBlank(s: String) = s.isNotBlank()
 
-    private fun parseCodeAndName(text: String): Pair<String, String>? {
-        val clean = text.trim()
+    private fun parseCodeAndName(code: String, name: String): Pair<String, String>? {
+        val clean = "$code $name".trim()
         val match = Regex("(\\d{6})\\s*(.+)").find(clean)
         return match?.let {
             Pair(it.groupValues[1], it.groupValues[2].trim())

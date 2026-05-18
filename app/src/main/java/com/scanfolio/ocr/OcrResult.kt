@@ -2,7 +2,8 @@ package com.scanfolio.ocr
 
 data class OcrResult(
     val header: List<String>,
-    val rows: List<OcrRow>
+    val rows: List<OcrRow>,
+    val source: OcrEngine.OcrSource? = null
 )
 
 data class OcrRow(
