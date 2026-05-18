@@ -19,7 +19,7 @@ import com.scanfolio.ui.analysis.AnalysisScreen
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object Portfolio : Screen("portfolio", "持仓", Icons.Default.List)
-    data object Scan : Screen("scan", "扫描", Icons.Default.CameraAlt)
+    data object Scan : Screen("scan", "添加", Icons.Default.AddCircle)
     data object Analysis : Screen("analysis", "分析", Icons.Default.BarChart)
 }
 
@@ -82,8 +82,8 @@ fun AppNavigation() {
             composable("index_manage") {
                 com.scanfolio.ui.settings.IndexManageScreen(navController)
             }
-            composable("preview") {
-                com.scanfolio.ui.scan.PreviewScreen(navController)
+            composable("pnl_detail") {
+                com.scanfolio.ui.pnl.PnLDetailScreen(navController)
             }
             composable("index_records/{indexId}/{indexName}") { backStackEntry ->
                 val indexId = backStackEntry.arguments?.getString("indexId")?.toLongOrNull() ?: return@composable
