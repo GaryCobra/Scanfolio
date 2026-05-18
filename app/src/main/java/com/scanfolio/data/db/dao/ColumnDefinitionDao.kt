@@ -12,8 +12,14 @@ interface ColumnDefinitionDao {
     @Query("SELECT * FROM column_definitions ORDER BY sort_order ASC")
     fun getAllColumns(): Flow<List<ColumnDefinitionEntity>>
 
+    @Query("SELECT * FROM column_definitions ORDER BY sort_order ASC")
+    suspend fun getAllSync(): List<ColumnDefinitionEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(column: ColumnDefinitionEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(columns: List<ColumnDefinitionEntity>)
 
     @Update
     suspend fun update(column: ColumnDefinitionEntity)
@@ -26,4 +32,7 @@ interface ColumnDefinitionDao {
 
     @Query("UPDATE column_definitions SET sort_order = :order WHERE id = :id")
     suspend fun updateSortOrder(id: Long, order: Int)
+
+    @Query("UPDATE column_definitions SET is_built_in = :isBuiltIn WHERE id = :id")
+    suspend fun updateIsBuiltIn(id: Long, isBuiltIn: Boolean)
 }

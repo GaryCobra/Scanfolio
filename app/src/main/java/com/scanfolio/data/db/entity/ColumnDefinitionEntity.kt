@@ -11,5 +11,6 @@ data class ColumnDefinitionEntity(
     val columnType: String,
     @ColumnInfo(name = "sort_order") val sortOrder: Int,
     val enabled: Boolean = true,
+    @ColumnInfo(name = "is_built_in") val isBuiltIn: Boolean = false,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
 )

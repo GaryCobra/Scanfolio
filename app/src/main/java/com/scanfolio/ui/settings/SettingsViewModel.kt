@@ -4,10 +4,13 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.scanfolio.MomentumApp
+import com.scanfolio.data.api.IndexQuote
 import com.scanfolio.data.db.entity.*
 import com.scanfolio.util.ExportImportManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     val app = application as MomentumApp
@@ -17,6 +20,77 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     )
 
     val marketIndexRepo = app.marketIndexRepository
+    val api = app.stockApiClient
+
+    private val _indexSearchQuery = MutableStateFlow("")
+    val indexSearchQuery: StateFlow<String> = _indexSearchQuery.asStateFlow()
+
+    private val _indexSearchResult = MutableStateFlow<IndexQuote?>(null)
+    val indexSearchResult: StateFlow<IndexQuote?> = _indexSearchResult.asStateFlow()
+
+    private val _isSearchingIndex = MutableStateFlow(false)
+    val isSearchingIndex: StateFlow<Boolean> = _isSearchingIndex.asStateFlow()
+
+    private val _indexSearchError = MutableStateFlow<String?>(null)
+    val indexSearchError: StateFlow<String?> = _indexSearchError.asStateFlow()
+
+    fun updateIndexQuery(query: String) {
+        if (query.length <= 6 && query.all { it.isDigit() }) {
+            _indexSearchQuery.value = query
+            if (query.length == 6) {
+                searchIndex(query)
+            } else {
+                _indexSearchResult.value = null
+                _indexSearchError.value = null
+            }
+        }
+    }
+
+    private fun searchIndex(code: String) {
+        viewModelScope.launch {
+            _isSearchingIndex.value = true
+            _indexSearchError.value = null
+            _indexSearchResult.value = null
+            try {
+                val quote = withContext(Dispatchers.IO) { api.fetchIndexQuote(code) }
+                if (quote != null) {
+                    _indexSearchResult.value = quote
+                } else {
+                    _indexSearchError.value = "未找到该指数代码：$code"
+                }
+            } catch (e: Exception) {
+                _indexSearchError.value = "查询失败: ${e.message ?: "网络错误"}"
+            } finally {
+                _isSearchingIndex.value = false
+            }
+        }
+    }
+
+    fun addIndexFromSearch(quote: IndexQuote) {
+        viewModelScope.launch {
+            val defId = marketIndexRepo.addDefinition(
+                MarketIndexDefinitionEntity(name = quote.name, code = quote.code)
+            )
+            withContext(Dispatchers.IO) {
+                val kline = api.fetchIndexKline(quote.code, 60)
+                for (k in kline) {
+                    val cal = java.util.Calendar.getInstance()
+                    val parts = k.day.split("-")
+                    cal.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt(), 0, 0, 0)
+                    marketIndexRepo.addRecord(
+                        MarketIndexDailyRecordEntity(
+                            indexId = defId,
+                            date = cal.timeInMillis,
+                            closeValue = k.close,
+                            changePercent = (k.close - k.open) / k.open * 100
+                        )
+                    )
+                }
+            }
+            _indexSearchQuery.value = ""
+            _indexSearchResult.value = null
+        }
+    }
 
     val marketIndices: StateFlow<List<MarketIndexDefinitionEntity>> = marketIndexRepo.getAllDefinitions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -60,20 +134,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun clearExportResult() { _exportJson.value = null }
     fun clearImportResult() { _importResult.value = null }
 
-    fun addDefaultColumns() {
-        val defaults = listOf(
-            "最新价" to "number", "涨跌幅" to "percentage", "成交量" to "number",
-            "20日涨幅" to "percentage", "DDE散户数量" to "number",
-            "竞价涨幅" to "percentage", "竞价金额" to "number",
-            "个股热度排名" to "number", "人气数值" to "number",
-            "涨停次数(年)" to "number", "所属概念" to "text", "所属同花顺行业" to "text"
-        )
+    fun addCustomColumn(name: String, type: String) {
         viewModelScope.launch {
-            defaults.forEachIndexed { index, (name, type) ->
-                settingsRepo.addColumn(
-                    ColumnDefinitionEntity(name = name, columnType = type, sortOrder = index)
-                )
-            }
+            settingsRepo.addColumn(
+                ColumnDefinitionEntity(name = name, columnType = type, sortOrder = columns.value.size)
+            )
         }
     }
 }

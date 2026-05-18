@@ -53,6 +53,14 @@ data class StockFullData(
     val indicators: Map<String, String> = emptyMap()
 )
 
+data class IndexQuote(
+    val code: String,
+    val name: String,
+    val currentValue: Double,
+    val changePercent: Double,
+    val changeAmount: Double
+)
+
 class StockApiClient(private val okHttp: OkHttpClient) {
 
     private val jsonOkHttp = OkHttpClient.Builder()
@@ -86,36 +94,34 @@ class StockApiClient(private val okHttp: OkHttpClient) {
     fun fetchFullQuote(code: String): StockQuote? {
         val exchange = determineExchange(code)
         val secId = if (exchange == "SH") "1.$code" else "0.$code"
-        val fields = "f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f55,f57,f58,f60,f116,f117,f162,f167,f168,f169,f170,f171,f127,f128,f140,f170"
-        val url = "https://push2.eastmoney.com/api/qt/stock/get?secid=$secId&fields=$fields"
+        val fields = "f43,f44,f45,f46,f47,f48,f50,f57,f58,f60,f116,f117,f127,f128,f140,f162,f167,f168,f169,f170,f171"
+        val url = "https://push2.eastmoney.com/api/qt/stock/get?secid=$secId&fields=$fields&fltt=2"
         return try {
             val resp = jsonOkHttp.newCall(Request.Builder().url(url).get().build()).execute()
             val raw = resp.body?.string() ?: return null
             val json = JSONObject(raw).optJSONObject("data") ?: return null
-            val price = json.optDouble("f43", 0.0)
-            val yestClose = json.optDouble("f47", 0.0)
             StockQuote(
                 code = code,
                 name = json.optString("f58", ""),
                 exchange = exchange,
-                currentPrice = price,
-                changePercent = json.optDouble("f55", 0.0),
-                changeAmount = json.optDouble("f170", 0.0),
+                currentPrice = json.optDouble("f43", 0.0),
+                changePercent = json.optDouble("f170", 0.0),
+                changeAmount = json.optDouble("f169", 0.0),
                 open = json.optDouble("f46", 0.0),
                 high = json.optDouble("f44", 0.0),
                 low = json.optDouble("f45", 0.0),
-                yesterdayClose = yestClose,
-                volume = json.optLong("f48", 0L),
-                turnover = json.optDouble("f49", 0.0),
+                yesterdayClose = json.optDouble("f60", 0.0),
+                volume = (json.optDouble("f47", 0.0) * 100).toLong(),
+                turnover = json.optDouble("f48", 0.0),
                 turnoverRate = json.optDouble("f168", 0.0),
-                amplitude = json.optDouble("f169", 0.0),
+                amplitude = json.optDouble("f171", 0.0),
                 volumeRatio = json.optDouble("f50", 0.0),
-                pe = json.optDouble("f60", 0.0),
+                pe = json.optDouble("f162", 0.0),
                 pb = json.optDouble("f167", 0.0),
                 marketCap = json.optDouble("f116", 0.0),
                 circulatingMarketCap = json.optDouble("f117", 0.0),
                 industry = json.optString("f127", ""),
-                concepts = json.optString("f140", "")
+                concepts = ""
             )
         } catch (_: Exception) {
             null
@@ -148,7 +154,7 @@ class StockApiClient(private val okHttp: OkHttpClient) {
     fun fetchKline(code: String, days: Int = 60): List<KlineData> {
         val exchange = determineExchange(code)
         val secId = if (exchange == "SH") "1.$code" else "0.$code"
-        val url = "https://push2.eastmoney.com/api/qt/stock/kline/get?secid=$secId&klt=101&fqt=1&beg=0&end=20500101"
+        val url = "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=$secId&klt=101&fqt=1&beg=0&end=20500101&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56"
         val resp = jsonOkHttp.newCall(Request.Builder().url(url).get().build()).execute()
         val body = resp.body?.string() ?: return emptyList()
         return parseKlineResponse(body, days)
@@ -195,6 +201,42 @@ class StockApiClient(private val okHttp: OkHttpClient) {
         } catch (_: Exception) {
             MoneyFlow()
         }
+    }
+
+    fun determineIndexExchange(code: String): String {
+        return when {
+            code.startsWith("000") || code.startsWith("001") -> "SH"
+            code.startsWith("399") || code.startsWith("932") -> "SZ"
+            else -> "SH"
+        }
+    }
+
+    fun fetchIndexQuote(code: String): IndexQuote? {
+        val secId = "${if (determineIndexExchange(code) == "SH") "1" else "0"}.$code"
+        val fields = "f43,f57,f58,f169,f170"
+        val url = "https://push2.eastmoney.com/api/qt/stock/get?secid=$secId&fields=$fields&fltt=2"
+        return try {
+            val resp = jsonOkHttp.newCall(Request.Builder().url(url).get().build()).execute()
+            val raw = resp.body?.string() ?: return null
+            val json = JSONObject(raw).optJSONObject("data") ?: return null
+            IndexQuote(
+                code = code,
+                name = json.optString("f58", ""),
+                currentValue = json.optDouble("f43", 0.0),
+                changePercent = json.optDouble("f55", 0.0),
+                changeAmount = json.optDouble("f170", 0.0)
+            )
+        } catch (_: Exception) { null }
+    }
+
+    fun fetchIndexKline(code: String, days: Int = 60): List<KlineData> {
+        val secId = "${if (determineIndexExchange(code) == "SH") "1" else "0"}.$code"
+        val url = "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=$secId&klt=101&fqt=1&beg=0&end=20500101&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56"
+        return try {
+            val resp = jsonOkHttp.newCall(Request.Builder().url(url).get().build()).execute()
+            val body = resp.body?.string() ?: return emptyList()
+            parseKlineResponse(body, days)
+        } catch (_: Exception) { emptyList() }
     }
 
     fun buildDataColumns(quote: StockQuote, kline: List<KlineData>, moneyFlow: MoneyFlow): Map<String, String> {

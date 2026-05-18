@@ -13,8 +13,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.scanfolio.data.api.IndexQuote
 import com.scanfolio.data.db.entity.MarketIndexDefinitionEntity
-import com.scanfolio.util.DateUtils
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
@@ -26,6 +26,11 @@ fun IndexManageScreen(
 ) {
     val indices by viewModel.marketIndices.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+
+    val query by viewModel.indexSearchQuery.collectAsState()
+    val searchResult by viewModel.indexSearchResult.collectAsState()
+    val isSearching by viewModel.isSearchingIndex.collectAsState()
+    val searchError by viewModel.indexSearchError.collectAsState()
 
     Scaffold(
         topBar = {
@@ -50,15 +55,44 @@ fun IndexManageScreen(
             )
         }
     ) { padding ->
-        if (indices.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("暂无大盘指数，点击右上角 + 添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            item {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { viewModel.updateIndexQuery(it) },
+                    label = { Text("搜索指数代码") },
+                    placeholder = { Text("输入6位指数代码") },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 8.dp),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = if (query.isNotEmpty()) {
+                        { IconButton(onClick = { viewModel.updateIndexQuery("") }) { Icon(Icons.Default.Close, contentDescription = "清除") } }
+                    } else null
+                )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
+
+            if (isSearching) {
+                item { Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
+            }
+
+            if (searchResult != null) {
+                item { SearchResultCard(searchResult!!, viewModel) }
+            }
+
+            if (searchError != null) {
+                item { Text(searchError!!, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.error) }
+            }
+
+            if (indices.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("暂无大盘指数，搜索代码或点击右上角 + 添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
                 items(indices, key = { it.id }) { index ->
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
@@ -133,5 +167,30 @@ fun IndexManageScreen(
             },
             dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("取消") } }
         )
+    }
+}
+
+@Composable
+private fun SearchResultCard(quote: IndexQuote, viewModel: SettingsViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(quote.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(quote.code, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("当前: ${"%.2f".format(quote.currentValue)}", style = MaterialTheme.typography.bodyMedium)
+                Text("涨跌: ${"%.2f%%".format(quote.changePercent)}", style = MaterialTheme.typography.bodyMedium)
+            }
+            Button(onClick = { viewModel.addIndexFromSearch(quote) }) {
+                Text("添加")
+            }
+        }
     }
 }
